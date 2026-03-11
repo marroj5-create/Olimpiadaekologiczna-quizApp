@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌿 Eco Quiz - Olimpiada Ekologiczna</title>
+
+<style>
+/* --- Podstawowe ustawienia --- */
+body{
+  font-family: -apple-system,BlinkMacSystemFont,sans-serif;
+  margin:0;
+  padding:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  background: linear-gradient(135deg,#0f2027,#2c5364);
+  color:white;
+  overflow:hidden;
+}
+
+.app{
+  width:100%;
+  max-width:480px;
+  padding:20px;
+  text-align:center;
+  position:relative;
+}
+
+/* --- Karty --- */
+.card{
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding:25px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+  animation:fade .5s ease;
+  transition: transform .2s;
+  position:relative;
+}
+
+.card:hover{
+  transform: translateY(-3px);
+}
+
+.hidden{
+  display:none !important;
+}
+
+@keyframes fade{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1}
+}
+
+/* --- Logo i tytuł --- */
+#app-logo{
+  font-size:32px;
+  margin-bottom:15px;
+}
+
+/* --- Przyciski --- */
+button{
+  width:100%;
+  padding:14px;
+  margin:6px 0;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  cursor:pointer;
+  transition:.2s;
+}
+
+button:hover{
+  transform: scale(1.03);
+}
+
+/* Kolory etapów quizu */
+.btn-szkolny{background:#3ecf8e;color:white;}        /* zielony */
+.btn-okregowy{background:#ff9800;color:white;}       /* pomarańczowy */
+.btn-wojewodzki{background:#2196f3;color:white;}    /* niebieski */
+.btn-ustny{background:#9c27b0;color:white;}         /* fioletowy */
+
+/* Wyjście czerwony */
+button.exit-btn{background:#e53935;color:white;margin-top:15px;}
+
+/* Progres bar */
+.progress{
+  height:6px;
+  background:#ffffff20;
+  border-radius:6px;
+  margin-bottom:20px;
+  overflow:hidden;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  transition:.3s;
+}
+
+/* Pole hasła */
+#password{
+  width:80%;
+  max-width:300px;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  font-size:16px;
+  margin-bottom:12px;
+}
+
+/* Powtórki */
+.repeat-flash{
+  animation:flash 0.5s ease;
+}
+
+@keyframes flash{
+  0%{background-color:#ffeb3b33;}
+  50%{background-color:#ffeb3b77;}
+  100%{background-color:transparent;}
+}
+
+/* Nagroda */
+#celebration{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:28px;
+  color:#ffeb3b;
+  text-shadow:0 0 10px #fff;
+  display:none;
+  animation:pop 1s ease forwards;
+}
+
+@keyframes pop{
+  0%{transform:translate(-50%,-50%) scale(0);}
+  50%{transform:translate(-50%,-50%) scale(1.3);}
+  100%{transform:translate(-50%,-50%) scale(1);}
+}
+
+/* Pole odpowiedzi ustnej */
+#oral-answer{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  margin-bottom:8px;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- LOGOWANIE -->
+<div id="login" class="card">
+  <div id="app-logo">🌿 Eco Quiz</div>
+  <h2>🔐 Wprowadź hasło</h2>
+  <input type="password" id="password" placeholder="Hasło">
+  <button onclick="checkPassword()">Zaloguj</button>
+  <p id="login-msg"></p>
+</div>
+
+<!-- MENU PO LOGOWANIU -->
+<div id="menu" class="card hidden">
+  <div id="app-logo">🌿 Eco Quiz</div>
+  <h2>Wybierz tryb</h2>
+  <button onclick="selectMode('nauka')">📖 Nauka</button>
+  <button onclick="selectMode('test')">📝 Test olimpijski</button>
+  <button onclick="selectMode('poprawa')">♻️ Poprawa</button>
+</div>
+
+<!-- MENU WYBORU ETAPU -->
+<div id="stage-menu" class="card hidden">
+  <h2>Wybierz etap olimpiady</h2>
+  <button class="btn-szkolny" onclick="chooseCategory('szkolny')">Szkolny</button>
+  <button class="btn-okregowy" onclick="chooseCategory('okregowy')">Okręgowy</button>
+  <button class="btn-wojewodzki" onclick="chooseCategory('wojewodzki')">Wojewódzki</button>
+  <button class="btn-ustny" onclick="chooseCategory('ustny')">Pytania ustne</button>
+  <button class="exit-btn" onclick="goMenu()">Powrót</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz" class="card hidden">
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <h3 id="question"></h3>
+  <div id="answers"></div>
+  <input type="text" id="oral-answer" class="hidden" placeholder="Twoja odpowiedź">
+  <button class="exit-btn" onclick="exitQuiz()">Wyjście</button>
+</div>
+
+<!-- STATYSTYKI -->
+<div id="stats" class="card hidden">
+  <h2>📊 Statystyki</h2>
+  <p id="score"></p>
+  <p id="repeats"></p>
+  <p id="oral-summary"></p>
+  <button onclick="goMenu()">Powrót</button>
+</div>
+
+<!-- NAGRODA -->
+<div id="celebration">🎉 Brawo! Ukończono quiz! 🎉</div>
+
+</div>
+
+<script>
+// --- PYTANIA ---
+// Miejsce na dodawanie nowych pytań:
+// allQuestions.szkolny.push({q:"...", a:["..."], correct:0});
+// allQuestions.okregowy.push({q:"...", a:["..."], correct:0});
+// allQuestions.wojewodzki.push({q:"...", a:["..."], correct:0});
+// allQuestions.ustny.push({q:"...", a:["..."], correct:0});
+let allQuestions={
+  szkolny:[
+    {q:"Który gaz odpowiada za efekt cieplarniany?", a:["Tlen","Dwutlenek węgla","Azot","Hel"], correct:1},
+    {q:"Najbogatszy w bioróżnorodność biom?", a:["Tundra","Pustynia","Las tropikalny","Step"], correct:2},
+    {q:"Proces usuwający CO₂ z atmosfery?", a:["Oddychanie","Fotosynteza","Spalanie","Parowanie"], correct:1}
+  ],
+  okregowy:[
+    {q:"Pierwiastek kluczowy w eutrofizacji?", a:["Azot","Fosfor","Potas","Sód"], correct:1},
+    {q:"Bioindykator czystości powietrza?", a:["Nietoperz","Sowa","Pszczoła","Mucha"], correct:2}
+  ],
+  wojewodzki:[
+    {q:"Efekt albedo to:", a:["Odbicie promieni słonecznych","Nagromadzenie CO₂","Topnienie lodowców","Ogrzewanie oceanu"], correct:0}
+  ],
+  ustny:[
+    {q:"Wymień 3 główne źródła zanieczyszczenia wód.", a:[""], correct:0}
+  ]
+};
+
+let index=0, score=0, category="", mode="";
+let repeats=[];
+let repeatQueue=JSON.parse(localStorage.getItem("repeatQueue")||"[]");
+let oralAnswers=[];
+
+// --- LOGOWANIE ---
+function checkPassword(){
+  let pass=document.getElementById("password").value;
+  if(pass==="ecoo"){
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("menu").classList.remove("hidden");
+  } else {document.getElementById("login-msg").innerText="❌ Niepoprawne hasło!";}
+}
+
+// --- TRYBY ---
+function selectMode(m){
+  mode=m;
+  if(mode==="poprawa"){
+    if(repeatQueue.length===0){
+      alert("Brak pytań do poprawy!");
+      return;
+    }
+    category="poprawa";
+    index=0;
+    score=0;
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("quiz").classList.remove("hidden");
+    loadQuestion();
+  } else {
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("stage-menu").classList.remove("hidden");
+  }
+}
+
+// --- WYBÓR KATEGORII ---
+function chooseCategory(cat){
+  category=cat;
+  index=0;
+  score=0;
+  repeats=[];
+  oralAnswers=[];
+  document.getElementById("stage-menu").classList.add("hidden");
+  document.getElementById("quiz").classList.remove("hidden");
+  loadQuestion();
+}
+
+// --- ŁADOWANIE PYTANIA ---
+function loadQuestion(){
+  let q;
+  if(category==="poprawa" && repeatQueue.length>0){
+    q=repeatQueue[0];
+    document.querySelector(".card").classList.add("repeat-flash");
+    setTimeout(()=>document.querySelector(".card").classList.remove("repeat-flash"),500);
+  } else {
+    q=allQuestions[category][index];
+  }
+
+  document.getElementById("question").innerText=q.q;
+  let answers=document.getElementById("answers");
+  answers.innerHTML="";
+  let oralInput=document.getElementById("oral-answer");
+  oralInput.classList.add("hidden");
+
+  if(category==="ustny"){
+    oralInput.classList.remove("hidden");
+    oralInput.value="";
+    let btn=document.createElement("button");
+    btn.innerText="Wyślij odpowiedź";
+    btn.onclick=submitOral;
+    answers.appendChild(btn);
+    return;
+  }
+
+  q.a.forEach((ans,i)=>{
+    let btn=document.createElement("button");
+    btn.innerText=ans;
+    btn.className="answer";
+    btn.onclick=()=>answer(btn,i);
+    answers.appendChild(btn);
+  });
+
+  updateBar();
+}
+
+// --- ODPOWIEDŹ ---
+function answer(btn,i){
+  let q=category==="poprawa"?repeatQueue[0]:allQuestions[category][index];
+  let buttons=document.querySelectorAll(".answer");
+  buttons.forEach(b=>b.disabled=true);
+
+  if(i===q.correct){
+    btn.classList.add("correct");
+    score++;
+    if(category==="poprawa") repeatQueue.shift();
+  } else {
+    btn.classList.add("wrong");
+    buttons[q.correct].classList.add("correct");
+    if(category!=="poprawa") repeatQueue.push(q);
+  }
+  localStorage.setItem("repeatQueue",JSON.stringify(repeatQueue));
+  setTimeout(nextQuestion,900);
+}
+
+// --- ODPOWIEDŹ USTNA ---
+function submitOral(){
+  let answer=document.getElementById("oral-answer").value;
+  oralAnswers.push(answer);
+  score++;
+  index++;
+  if(index>=allQuestions[category].length){
+    finish();
+  } else {loadQuestion();}
+}
+
+// --- NASTĘPNE PYTANIE ---
+function nextQuestion(){
+  if(category==="poprawa" && repeatQueue.length>0){
+    loadQuestion();
+    return;
+  }
+  index++;
+  if(index>=allQuestions[category].length) finish();
+  else loadQuestion();
+}
+
+// --- PROGRES ---
+function updateBar(){
+  let percent=(index/(allQuestions[category]?.length||1))*100;
+  document.getElementById("bar").style.width=percent+"%";
+}
+
+// --- KONIEC QUIZU ---
+function finish(){
+  localStorage.setItem("score",score);
+  document.getElementById("quiz").classList.add("hidden");
+  showStats();
+  // Nagroda
+  let celeb=document.getElementById("celebration");
+  celeb.style.display="block";
+  setTimeout(()=>celeb.style.display="none",2500);
+}
+
+// --- STATYSTYKI ---
+function showStats(){
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("stats").classList.remove("hidden");
+
+  document.getElementById("score").innerText="Wynik: "+score+"/"+(allQuestions[category]?.length||repeatQueue.length);
+  document.getElementById("repeats").innerText=repeatQueue.length>0?"Powtórki: "+repeatQueue.map(r=>r.q).join("; "):"Brak pytań do powtórek!";
+  if(category==="ustny") document.getElementById("oral-summary").innerText="Twoje odpowiedzi: "+oralAnswers.join("; ");
+  else document.getElementById("oral-summary").innerText="";
+}
+
+// --- POWRÓT ---
+function goMenu(){
+  document.getElementById("stats").classList.add("hidden");
+  document.getElementById("stage-menu").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
+}
+
+// --- WYJŚCIE ---
+function exitQuiz(){
+  document.getElementById("quiz").classList.add("hidden");
+  goMenu();
+}
+</script>
+</body>
+</html>
